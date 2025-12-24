@@ -4,6 +4,7 @@ require('dotenv').config()
 
 const supabase = require('./config/supabase')
 const authRoutes = require('./routes/auth')
+const scansRoutes = require('./routes/scans')
 
 const app = express()
 const PORT = process.env.PORT || 3000
@@ -13,7 +14,7 @@ app.use(cors({
   credentials: true
 }))
 
-app.use(express.json())
+app.use(express.json({ limit: '10mb' }))
 
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} | ${req.method} ${req.path}`)
@@ -55,6 +56,7 @@ app.get('/api/db-test', async (req, res) => {
 })
 
 app.use('/api/auth', authRoutes)
+app.use('/api/scans', scansRoutes)
 
 app.use((req, res) => {
   res.status(404).json({ 

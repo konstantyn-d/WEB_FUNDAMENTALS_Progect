@@ -11,6 +11,7 @@ import IconWarning from '../assets/icons/warning.svg'
 import IconLightbulb from '../assets/icons/lightbulb.svg'
 import IconInfo from '../assets/icons/info.svg'
 import IconHome from '../assets/icons/home.svg'
+import IconHeartbeat from '../assets/icons/heartbeat.svg'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -122,15 +123,6 @@ const goToDashboard = () => {
   router.push({ name: 'dashboard' })
 }
 
-const getSeverityColor = (severity) => {
-  switch (severity) {
-    case 'mild': return '#22c55e'
-    case 'moderate': return '#f59e0b'
-    case 'severe': return '#ef4444'
-    default: return '#6b7280'
-  }
-}
-
 onUnmounted(() => {
   stopCamera()
 })
@@ -138,187 +130,216 @@ onUnmounted(() => {
 
 <template>
   <div class="scan-page">
+    <!-- Header -->
     <header class="scan-header">
-      <button @click="goBack" class="back-btn">
+      <button @click="goBack" class="scan-back-btn">
         <img :src="IconArrowLeft" alt="" class="icon" />
-        Back
+        <span>Back</span>
       </button>
-      <h1>Skin Scanner</h1>
-      <div class="spacer"></div>
+      <div class="scan-header-title">
+        <img :src="IconHeartbeat" alt="" class="icon" />
+        <span>AI Skin Scanner</span>
+      </div>
+      <div class="scan-header-actions"></div>
     </header>
 
+    <!-- Main Content -->
     <main class="scan-content">
-      <div class="error-message" v-if="error">
-        <img :src="IconWarning" alt="" class="icon" />
-        <span>{{ error }}</span>
+      <!-- Error Message -->
+      <div v-if="error" class="error-container">
+        <div class="error-icon">
+          <img :src="IconWarning" alt="" class="icon" />
+        </div>
+        <h2 class="error-title">Something went wrong</h2>
+        <p class="error-message">{{ error }}</p>
+        <button @click="retakePhoto" class="scan-btn">
+          <img :src="IconCamera" alt="" class="icon" />
+          Try Again
+        </button>
       </div>
 
       <!-- Results View -->
-      <div v-if="analysisResult" class="results-container">
+      <div v-else-if="analysisResult" class="results-container">
         <div class="results-header">
-          <h2>Analysis Complete</h2>
-          <p class="skin-type">Skin Type: <strong>{{ analysisResult.skinType }}</strong></p>
+          <div class="results-icon">
+            <img :src="IconCheck" alt="" class="icon" />
+          </div>
+          <h2 class="results-title">Analysis Complete</h2>
+          <p class="results-subtitle">Here's what we found</p>
+          <div class="skin-type-badge" v-if="analysisResult.skinType">
+            Skin Type: {{ analysisResult.skinType }}
+          </div>
         </div>
 
-        <div class="overall-assessment">
-          <h3>
-            <img :src="IconInfo" alt="" class="icon" />
-            Overall Assessment
-          </h3>
-          <p>{{ analysisResult.overallAssessment }}</p>
+        <!-- Overall Assessment -->
+        <div class="results-section">
+          <h3 class="results-section-title">Overall Assessment</h3>
+          <div class="results-card assessment-card">
+            <p class="assessment-text">{{ analysisResult.overallAssessment }}</p>
+          </div>
         </div>
 
-        <div class="issues-section" v-if="analysisResult.issues?.length > 0">
-          <h3>
-            <img :src="IconWarning" alt="" class="icon" />
-            Issues Found ({{ analysisResult.issues.length }})
-          </h3>
-          <div class="issues-list">
-            <div 
-              v-for="(issue, index) in analysisResult.issues" 
-              :key="index" 
-              class="issue-card"
-            >
-              <div class="issue-header">
-                <span class="issue-name">{{ issue.name }}</span>
-                <span 
-                  class="severity-badge" 
-                  :style="{ backgroundColor: getSeverityColor(issue.severity) }"
-                >
-                  {{ issue.severity }}
-                </span>
-              </div>
-              <p class="issue-location">{{ issue.location }}</p>
-              <p class="issue-description">{{ issue.description }}</p>
+        <!-- Issues Found -->
+        <div class="results-section" v-if="analysisResult.issues?.length > 0">
+          <h3 class="results-section-title">Issues Found ({{ analysisResult.issues.length }})</h3>
+          <div 
+            v-for="(issue, index) in analysisResult.issues" 
+            :key="index" 
+            class="results-card"
+          >
+            <div class="issue-header">
+              <span class="issue-name">{{ issue.name }}</span>
+              <span 
+                class="issue-severity"
+                :class="issue.severity"
+              >
+                {{ issue.severity }}
+              </span>
             </div>
+            <p class="issue-location">{{ issue.location }}</p>
+            <p class="issue-description">{{ issue.description }}</p>
           </div>
         </div>
 
-        <div class="no-issues" v-else>
-          <div class="no-issues-icon">
-            <img :src="IconCheck" alt="" class="icon icon-xl" />
+        <!-- No Issues -->
+        <div class="results-section" v-else>
+          <div class="results-card assessment-card">
+            <div class="assessment-label">Great News</div>
+            <p class="assessment-text">No significant skin issues were detected. Keep up your skincare routine!</p>
           </div>
-          <h3>Great news!</h3>
-          <p>No significant skin issues detected.</p>
         </div>
 
-        <div class="recommendations-section" v-if="analysisResult.recommendations?.length > 0">
-          <h3>
-            <img :src="IconLightbulb" alt="" class="icon" />
-            Recommendations
-          </h3>
-          <ul class="recommendations-list">
-            <li v-for="(rec, index) in analysisResult.recommendations" :key="index">
-              <img :src="IconCheck" alt="" class="icon icon-sm" />
-              <span>{{ rec }}</span>
-            </li>
-          </ul>
+        <!-- Recommendations -->
+        <div class="results-section" v-if="analysisResult.recommendations?.length > 0">
+          <h3 class="results-section-title">Recommendations</h3>
+          <div 
+            v-for="(rec, index) in analysisResult.recommendations" 
+            :key="index"
+            class="recommendation-item"
+          >
+            <div class="recommendation-icon">
+              <img :src="IconLightbulb" alt="" class="icon" />
+            </div>
+            <p class="recommendation-text">{{ rec }}</p>
+          </div>
         </div>
 
+        <!-- Actions -->
         <div class="results-actions">
-          <button @click="retakePhoto" class="btn-secondary">
+          <button @click="retakePhoto" class="scan-btn scan-btn-secondary">
             <img :src="IconCamera" alt="" class="icon" />
             New Scan
           </button>
-          <button @click="goToDashboard" class="btn-primary">
+          <button @click="goToDashboard" class="scan-btn">
             <img :src="IconHome" alt="" class="icon" />
-            Go to Dashboard
+            Dashboard
           </button>
         </div>
       </div>
 
       <!-- Camera View -->
-      <div v-else>
-        <div class="camera-container">
+      <div v-else class="camera-container">
+        <div class="camera-wrapper">
+          <!-- Video Feed -->
           <video 
             ref="videoRef" 
             autoplay 
             playsinline
             v-show="isCameraActive && !capturedImage"
-            class="camera-view"
+            class="camera-video"
           ></video>
 
+          <!-- Captured Image -->
           <img 
             v-if="capturedImage" 
             :src="capturedImage" 
             alt="Captured photo"
-            class="captured-photo"
+            class="camera-captured-image"
           />
 
-          <div 
-            v-if="!isCameraActive && !capturedImage" 
-            class="camera-placeholder"
-          >
-            <div class="placeholder-icon">
-              <img :src="IconCamera" alt="" class="icon icon-xl" />
+          <!-- Placeholder -->
+          <div v-if="!isCameraActive && !capturedImage" class="camera-placeholder">
+            <div class="camera-placeholder-icon">
+              <img :src="IconCamera" alt="" class="icon" />
             </div>
-            <p>Click "Start Camera" to begin</p>
+            <h3 class="camera-placeholder-title">Ready to Scan</h3>
+            <p class="camera-placeholder-text">
+              Position your face in good lighting and start the camera to begin your skin analysis
+            </p>
           </div>
 
+          <!-- Face Guide -->
           <div class="face-guide" v-if="isCameraActive && !capturedImage">
-            <div class="guide-oval"></div>
-            <p class="guide-text">Position your face within the oval</p>
+            <div class="face-guide-oval"></div>
+          </div>
+
+          <!-- Analyzing Overlay -->
+          <div v-if="isAnalyzing" class="analysis-loading">
+            <div class="scanning-line"></div>
+            <div class="analysis-loader">
+              <div class="loader-ring"></div>
+              <p class="loader-text">Analyzing your skin...</p>
+              <p class="loader-subtext">This may take a few seconds</p>
+            </div>
           </div>
         </div>
 
-        <canvas ref="canvasRef" style="display: none;"></canvas>
+        <canvas ref="canvasRef" class="camera-canvas"></canvas>
 
-        <div class="controls">
+        <!-- Controls -->
+        <div class="scan-controls">
+          <!-- Start Camera -->
           <button 
             v-if="!isCameraActive && !capturedImage" 
             @click="startCamera" 
-            class="btn-primary"
+            class="scan-btn"
           >
             <img :src="IconCamera" alt="" class="icon" />
             Start Camera
           </button>
 
+          <!-- Capture Button -->
           <button 
             v-if="isCameraActive && !capturedImage" 
             @click="capturePhoto" 
-            class="btn-capture"
+            class="capture-btn"
           >
-            <div class="capture-circle"></div>
+            <img :src="IconCamera" alt="" class="icon" />
           </button>
 
-          <div v-if="capturedImage && !analysisResult" class="post-capture-controls">
-            <button @click="retakePhoto" class="btn-secondary">
+          <!-- Post Capture Actions -->
+          <div v-if="capturedImage && !analysisResult && !isAnalyzing" class="scan-secondary-actions">
+            <button @click="retakePhoto" class="scan-btn scan-btn-secondary">
               <img :src="IconCamera" alt="" class="icon" />
               Retake
             </button>
-            <button 
-              @click="analyzeSkin" 
-              class="btn-primary"
-              :disabled="isAnalyzing"
-            >
-              {{ isAnalyzing ? 'Analyzing...' : 'Analyze Skin' }}
+            <button @click="analyzeSkin" class="scan-btn">
+              <img :src="IconHeartbeat" alt="" class="icon" />
+              Analyze Skin
             </button>
           </div>
         </div>
 
-        <div class="instructions" v-if="!capturedImage">
-          <h3>
-            <img :src="IconLightbulb" alt="" class="icon" />
-            Tips for best results
-          </h3>
-          <ul>
-            <li>
-              <img :src="IconCheck" alt="" class="icon icon-sm" />
-              Use good, natural lighting
-            </li>
-            <li>
-              <img :src="IconCheck" alt="" class="icon icon-sm" />
-              Remove makeup if possible
-            </li>
-            <li>
-              <img :src="IconCheck" alt="" class="icon icon-sm" />
-              Face the camera directly
-            </li>
-            <li>
-              <img :src="IconCheck" alt="" class="icon icon-sm" />
-              Keep a neutral expression
-            </li>
-          </ul>
+        <!-- Tips -->
+        <div class="scan-tips" v-if="!capturedImage && !isCameraActive">
+          <div class="scan-tip">
+            <div class="scan-tip-icon">
+              <img :src="IconLightbulb" alt="" class="icon" />
+            </div>
+            <span class="scan-tip-text">Good lighting</span>
+          </div>
+          <div class="scan-tip">
+            <div class="scan-tip-icon">
+              <img :src="IconCamera" alt="" class="icon" />
+            </div>
+            <span class="scan-tip-text">Face camera directly</span>
+          </div>
+          <div class="scan-tip">
+            <div class="scan-tip-icon">
+              <img :src="IconCheck" alt="" class="icon" />
+            </div>
+            <span class="scan-tip-text">Remove makeup</span>
+          </div>
         </div>
       </div>
     </main>

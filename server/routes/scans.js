@@ -65,10 +65,15 @@ router.post('/analyze', async (req, res) => {
     }
 
     console.log('Analyzing skin for user:', user.email)
+    console.log('Image data length:', image?.length || 0)
 
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'gpt-4o-mini',
       messages: [
+        {
+          role: 'system',
+          content: 'You are a helpful skincare advisor. You analyze photos to provide general skincare advice. Always respond with valid JSON only, no markdown or extra text.'
+        },
         {
           role: 'user',
           content: [
@@ -77,47 +82,80 @@ router.post('/analyze', async (req, res) => {
               type: 'image_url',
               image_url: {
                 url: image,
-                detail: 'high'
+                detail: 'low'
               }
             }
           ]
         }
       ],
-      max_tokens: 1000
+      max_tokens: 1500
     })
 
     const content = response.choices[0].message.content
+    console.log('OpenAI response:', content)
 
     let analysis
     try {
-      const jsonMatch = content.match(/\{[\s\S]*\}/)
+      // Try to extract JSON from the response
+      // Remove markdown code blocks if present
+      let cleanContent = content
+        .replace(/```json\s*/gi, '')
+        .replace(/```\s*/gi, '')
+        .trim()
+      
+      const jsonMatch = cleanContent.match(/\{[\s\S]*\}/)
       if (jsonMatch) {
         analysis = JSON.parse(jsonMatch[0])
+        console.log('Parsed analysis successfully')
       } else {
         throw new Error('No JSON found in response')
       }
     } catch (parseError) {
       console.error('Failed to parse AI response:', content)
-      analysis = {
-        issues: [],
-        recommendations: ['Unable to parse analysis. Please try again.'],
-        overallAssessment: 'Analysis could not be completed',
-        skinType: 'unknown'
+      console.error('Parse error:', parseError.message)
+      
+      // Check if OpenAI refused the request
+      if (content.toLowerCase().includes('cannot') || 
+          content.toLowerCase().includes("can't") ||
+          content.toLowerCase().includes('unable') ||
+          content.toLowerCase().includes('sorry')) {
+        analysis = {
+          issues: [],
+          recommendations: [
+            'Please ensure good lighting',
+            'Position your face clearly in the frame',
+            'Try again with a clearer photo'
+          ],
+          overallAssessment: 'Could not analyze the image. Please try with a clearer photo in good lighting.',
+          skinType: 'unknown'
+        }
+      } else {
+        analysis = {
+          issues: [],
+          recommendations: ['Please try again with a different photo.'],
+          overallAssessment: 'Analysis could not be completed. Please try again.',
+          skinType: 'unknown'
+        }
       }
     }
 
+    // Save to database
+    console.log('Saving scan to database for user:', user.id)
+    
     const { data: scan, error: dbError } = await supabase
       .from('scans')
       .insert({
         user_id: user.id,
-        issues: analysis.issues,
-        recommendations: analysis.recommendations
+        issues: analysis.issues || [],
+        recommendations: analysis.recommendations || []
       })
       .select()
       .single()
 
     if (dbError) {
-      console.error('Database error:', dbError)
+      console.error('Database error:', dbError.message, dbError.details)
+    } else {
+      console.log('Scan saved successfully with ID:', scan?.id)
     }
 
     res.json({
@@ -195,18 +233,25 @@ router.get('/stats', async (req, res) => {
       })
     }
 
+    // Get all scans ordered by date
     const { data: scans, error } = await supabase
       .from('scans')
       .select('*')
       .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
 
-    if (error) throw error
+    if (error) {
+      console.error('Stats fetch error:', error)
+      throw error
+    }
 
-    const totalScans = scans.length
-    const totalIssues = scans.reduce((acc, scan) => {
+    const totalScans = scans?.length || 0
+    const totalIssues = scans?.reduce((acc, scan) => {
       return acc + (scan.issues?.length || 0)
-    }, 0)
-    const lastScan = scans.length > 0 ? scans[0].created_at : null
+    }, 0) || 0
+    const lastScan = scans?.length > 0 ? scans[0].created_at : null
+
+    console.log('Stats:', { totalScans, totalIssues, lastScan })
 
     res.json({
       totalScans,
@@ -215,6 +260,7 @@ router.get('/stats', async (req, res) => {
     })
 
   } catch (error) {
+    console.error('Stats error:', error.message)
     res.status(500).json({
       error: 'Failed to fetch stats',
       message: error.message

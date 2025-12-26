@@ -4,46 +4,93 @@ const openai = require('../config/openai')
 
 const router = express.Router()
 
-const SKIN_ANALYSIS_PROMPT = `
-You are a skincare analysis assistant. Analyze the provided face photo and describe ONLY what is visually observable.
-Do NOT diagnose medical conditions and do NOT claim to be a doctor/dermatologist.
-If something could be medical or uncertain, label it as "possible" and recommend consulting a dermatologist.
+// System prompt - БЕЗ медицинских слов!
+const SYSTEM_PROMPT = `
+You are a skincare & beauty routine assistant.
+You provide non-medical, cosmetic observations based only on what is visible in the photo.
+Do not diagnose diseases or mention medical conditions.
+If you cannot reliably see details, return an empty concerns array and a basic gentle routine.
+If the person appears to be under 18, return empty concerns and basic routine.
+Output valid JSON only.
+`.trim()
 
-Focus on visible features such as:
-- dryness/dehydration signs (flaking, dullness)
-- oiliness/shine, enlarged pores
-- redness/irritation appearance
-- uneven tone, hyperpigmentation-looking spots
-- acne-like blemishes, comedone-like bumps
-- texture irregularities, fine lines
-- under-eye darkness/puffiness appearance
+// User prompt - задача
+const USER_PROMPT = `
+From the visible appearance in the photo, list cosmetic skincare concerns (e.g., shine, dryness-looking areas, visible redness, uneven tone-looking areas, visible pores, blemish-like spots).
+Then propose a gentle routine.
 
-Return JSON ONLY in this exact format:
+Return JSON ONLY:
 {
-  "issues": [
-    {
-      "name": "short observable issue name",
-      "severity": "mild|moderate|severe",
-      "location": "face area",
-      "description": "what you see in the photo (no diagnosis words)",
-      "confidence": 0.8
-    }
-  ],
-  "recommendations": [
-    "skincare recommendation 1",
-    "skincare recommendation 2",
-    "skincare recommendation 3"
-  ],
-  "overallAssessment": "short summary based on visible features",
-  "skinType": "oily|dry|combination|normal",
-  "whenToSeeDermatologist": ["concern 1 if any"]
+  "concerns": [{"name":"...","area":"...","description":"...","confidence":0.0}],
+  "routine":{"morning":["..."],"evening":["..."]},
+  "ingredientsToConsider":["..."],
+  "avoidIfSensitive":["..."],
+  "overallSummary":"..."
 }
 
 Rules:
-- Use ONLY the allowed enums for severity and skinType.
-- If skin looks healthy, return an empty issues array and positive overallAssessment.
-- Respond with JSON only. No extra text, no markdown.
-`
+- confidence 0.0–1.0
+- If details are unclear or skin looks fine: concerns=[]
+- JSON only
+`.trim()
+
+// Fallback при отказе
+const FALLBACK_RESPONSE = {
+  concerns: [],
+  routine: {
+    morning: ["gentle cleanser", "moisturizer", "SPF 30+"],
+    evening: ["gentle cleanser", "moisturizer"]
+  },
+  ingredientsToConsider: ["niacinamide", "ceramides", "hyaluronic acid"],
+  avoidIfSensitive: ["fragrance", "harsh scrubs", "alcohol"],
+  overallSummary: "Could not assess photo details reliably. Here is a safe basic routine."
+}
+
+// Проверка на отказ модели
+function isRefusal(content) {
+  if (!content) return true
+  const lower = content.toLowerCase()
+  const refusalPhrases = [
+    "i can't assist",
+    "i cannot assist",
+    "i'm unable",
+    "i am unable",
+    "sorry",
+    "i can't analyze",
+    "i cannot analyze",
+    "i'm not able",
+    "i am not able",
+    "cannot provide",
+    "can't provide",
+    "unable to",
+    "not appropriate",
+    "against my guidelines"
+  ]
+  return refusalPhrases.some(phrase => lower.includes(phrase))
+}
+
+// Конвертация нового формата в старый для совместимости с фронтендом
+function convertToLegacyFormat(analysis) {
+  return {
+    issues: (analysis.concerns || []).map(concern => ({
+      name: concern.name,
+      severity: 'mild',
+      location: concern.area,
+      description: concern.description,
+      confidence: concern.confidence
+    })),
+    recommendations: [
+      ...(analysis.routine?.morning || []).map(s => `Morning: ${s}`),
+      ...(analysis.routine?.evening || []).map(s => `Evening: ${s}`),
+      ...(analysis.ingredientsToConsider || []).map(i => `Consider: ${i}`)
+    ],
+    overallAssessment: analysis.overallSummary || '',
+    skinType: 'unknown',
+    routine: analysis.routine,
+    ingredientsToConsider: analysis.ingredientsToConsider,
+    avoidIfSensitive: analysis.avoidIfSensitive
+  }
+}
 
 router.post('/analyze', async (req, res) => {
   try {
@@ -76,103 +123,127 @@ router.post('/analyze', async (req, res) => {
 
     console.log('Analyzing skin for user:', user.email)
     console.log('Image data length:', image?.length || 0)
+    
+    // ДИАГНОСТИКА: проверяем формат изображения
+    console.log('Image starts with:', image?.slice(0, 50))
 
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [
-        {
-          role: 'system',
-          content: 'You are a cosmetic skincare advisor (NOT a doctor). You observe visible skin features in photos and provide general skincare tips. You never diagnose medical conditions. Always respond with valid JSON only.'
-        },
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: SKIN_ANALYSIS_PROMPT },
-            {
-              type: 'image_url',
-              image_url: {
-                url: image,
-                detail: 'high'
-              }
-            }
-          ]
-        }
-      ],
-      max_tokens: 2000,
-      temperature: 0.4
-    })
+    // ИСПРАВЛЕНИЕ: гарантируем правильный формат data URL
+    const imgUrl = image.startsWith('data:image/')
+      ? image
+      : `data:image/jpeg;base64,${image}`
+    
+    console.log('Image URL format:', imgUrl.slice(0, 30))
 
-    const content = response.choices[0].message.content
-    console.log('OpenAI response:', content)
-
-    let analysis
+    // Запрос к OpenAI с response_format для железобетонного JSON
+    let response
     try {
-      // Try to extract JSON from the response
-      // Remove markdown code blocks if present
-      let cleanContent = content
-        .replace(/```json\s*/gi, '')
-        .replace(/```\s*/gi, '')
-        .trim()
-      
-      const jsonMatch = cleanContent.match(/\{[\s\S]*\}/)
-      if (jsonMatch) {
-        analysis = JSON.parse(jsonMatch[0])
+      response = await openai.chat.completions.create({
+        model: 'gpt-4o',
+        messages: [
+          {
+            role: 'system',
+            content: SYSTEM_PROMPT
+          },
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: USER_PROMPT },
+              {
+                type: 'image_url',
+                image_url: {
+                  url: imgUrl,
+                  detail: 'high'
+                }
+              }
+            ]
+          }
+        ],
+        response_format: { type: "json_object" },
+        max_tokens: 1200,
+        temperature: 0.3
+      })
+    } catch (openaiError) {
+      console.error('OpenAI API error:', openaiError.message)
+      throw new Error('AI service temporarily unavailable')
+    }
+
+    // ПРАВИЛЬНОЕ чтение ответа: content + refusal + finish_reason
+    const choice = response?.choices?.[0]
+    const msg = choice?.message
+    
+    const content = msg?.content ?? null
+    const refusal = msg?.refusal ?? null
+    const finish = choice?.finish_reason
+    
+    // Диагностика
+    console.log('finish_reason:', finish)
+    console.log('has_content:', content !== null && content !== undefined)
+    console.log('has_refusal:', refusal !== null && refusal !== undefined)
+    if (refusal) console.log('refusal:', refusal)
+    if (content) console.log('content preview:', content.substring(0, 300))
+    
+    // Используем content или refusal
+    const rawText = content ?? refusal ?? ''
+
+    let analysis = null
+    let status = 'completed'
+
+    // Проверяем на отказ: content_filter, refusal поле, или текст отказа
+    if (finish === 'content_filter' || refusal || isRefusal(rawText)) {
+      console.log('OpenAI refused to analyze, reason:', finish === 'content_filter' ? 'content_filter' : refusal ? 'refusal field' : 'text refusal')
+      analysis = FALLBACK_RESPONSE
+      status = 'fallback'
+    } else if (!rawText) {
+      console.log('Empty response from OpenAI')
+      analysis = FALLBACK_RESPONSE
+      status = 'empty_response'
+    } else {
+      // Пробуем распарсить JSON
+      try {
+        analysis = JSON.parse(rawText)
         console.log('Parsed analysis successfully')
-      } else {
-        throw new Error('No JSON found in response')
-      }
-    } catch (parseError) {
-      console.error('Failed to parse AI response:', content)
-      console.error('Parse error:', parseError.message)
-      
-      // Check if OpenAI refused the request
-      if (content.toLowerCase().includes('cannot') || 
-          content.toLowerCase().includes("can't") ||
-          content.toLowerCase().includes('unable') ||
-          content.toLowerCase().includes('sorry')) {
-        analysis = {
-          issues: [],
-          recommendations: [
-            'Please ensure good lighting',
-            'Position your face clearly in the frame',
-            'Try again with a clearer photo'
-          ],
-          overallAssessment: 'Could not analyze the image. Please try with a clearer photo in good lighting.',
-          skinType: 'unknown'
-        }
-      } else {
-        analysis = {
-          issues: [],
-          recommendations: ['Please try again with a different photo.'],
-          overallAssessment: 'Analysis could not be completed. Please try again.',
-          skinType: 'unknown'
-        }
+      } catch (parseError) {
+        console.log('Failed to parse JSON:', parseError.message)
+        analysis = FALLBACK_RESPONSE
+        status = 'parse_error'
       }
     }
 
-    // Save to database
-    console.log('Saving scan to database for user:', user.id)
-    
-    const { data: scan, error: dbError } = await supabase
-      .from('scans')
-      .insert({
-        user_id: user.id,
-        issues: analysis.issues || [],
-        recommendations: analysis.recommendations || []
-      })
-      .select()
-      .single()
+    // Конвертируем в legacy формат для фронтенда
+    const legacyAnalysis = convertToLegacyFormat(analysis)
 
-    if (dbError) {
-      console.error('Database error:', dbError.message, dbError.details)
+    // Сохраняем только если есть валидный результат
+    let scanId = null
+    
+    if (status === 'completed') {
+      console.log('Saving scan to database for user:', user.id)
+      
+      const { data: scan, error: dbError } = await supabase
+        .from('scans')
+        .insert({
+          user_id: user.id,
+          issues: legacyAnalysis.issues || [],
+          recommendations: legacyAnalysis.recommendations || []
+        })
+        .select()
+        .single()
+
+      if (dbError) {
+        console.error('Database error:', dbError.message, dbError.details)
+      } else {
+        console.log('Scan saved successfully with ID:', scan?.id)
+        scanId = scan?.id
+      }
     } else {
-      console.log('Scan saved successfully with ID:', scan?.id)
+      console.log('Skipping database save due to status:', status)
     }
 
     res.json({
       success: true,
-      analysis,
-      scanId: scan?.id
+      analysis: legacyAnalysis,
+      rawAnalysis: analysis,
+      scanId,
+      status
     })
 
   } catch (error) {

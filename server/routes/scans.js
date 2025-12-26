@@ -4,36 +4,46 @@ const openai = require('../config/openai')
 
 const router = express.Router()
 
-const SKIN_ANALYSIS_PROMPT = `You are a professional dermatologist AI assistant. Analyze this face photo and identify any visible skin issues or conditions.
+const SKIN_ANALYSIS_PROMPT = `
+You are a skincare analysis assistant. Analyze the provided face photo and describe ONLY what is visually observable.
+Do NOT diagnose medical conditions and do NOT claim to be a doctor/dermatologist.
+If something could be medical or uncertain, label it as "possible" and recommend consulting a dermatologist.
 
-For each issue found, provide:
-1. Name of the condition
-2. Severity (mild, moderate, severe)
-3. Location on face
-4. Brief description
+Focus on visible features such as:
+- dryness/dehydration signs (flaking, dullness)
+- oiliness/shine, enlarged pores
+- redness/irritation appearance
+- uneven tone, hyperpigmentation-looking spots
+- acne-like blemishes, comedone-like bumps
+- texture irregularities, fine lines
+- under-eye darkness/puffiness appearance
 
-Also provide general skincare recommendations based on what you see.
-
-IMPORTANT: Respond ONLY with valid JSON in this exact format:
+Return JSON ONLY in this exact format:
 {
   "issues": [
     {
-      "name": "Issue name",
+      "name": "short observable issue name",
       "severity": "mild|moderate|severe",
-      "location": "Where on face",
-      "description": "Brief description"
+      "location": "face area",
+      "description": "what you see in the photo (no diagnosis words)",
+      "confidence": 0.8
     }
   ],
   "recommendations": [
-    "Recommendation 1",
-    "Recommendation 2"
+    "skincare recommendation 1",
+    "skincare recommendation 2",
+    "skincare recommendation 3"
   ],
-  "overallAssessment": "Brief overall skin health assessment",
-  "skinType": "oily|dry|combination|normal"
+  "overallAssessment": "short summary based on visible features",
+  "skinType": "oily|dry|combination|normal",
+  "whenToSeeDermatologist": ["concern 1 if any"]
 }
 
-If no issues are found, return empty issues array with positive assessment.
-Be professional but accessible. Do not diagnose serious conditions - recommend seeing a dermatologist for concerning issues.`
+Rules:
+- Use ONLY the allowed enums for severity and skinType.
+- If skin looks healthy, return an empty issues array and positive overallAssessment.
+- Respond with JSON only. No extra text, no markdown.
+`
 
 router.post('/analyze', async (req, res) => {
   try {
@@ -68,11 +78,11 @@ router.post('/analyze', async (req, res) => {
     console.log('Image data length:', image?.length || 0)
 
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'gpt-4o',
       messages: [
         {
           role: 'system',
-          content: 'You are a helpful skincare advisor. You analyze photos to provide general skincare advice. Always respond with valid JSON only, no markdown or extra text.'
+          content: 'You are a cosmetic skincare advisor (NOT a doctor). You observe visible skin features in photos and provide general skincare tips. You never diagnose medical conditions. Always respond with valid JSON only.'
         },
         {
           role: 'user',
@@ -82,13 +92,14 @@ router.post('/analyze', async (req, res) => {
               type: 'image_url',
               image_url: {
                 url: image,
-                detail: 'low'
+                detail: 'high'
               }
             }
           ]
         }
       ],
-      max_tokens: 1500
+      max_tokens: 2000,
+      temperature: 0.4
     })
 
     const content = response.choices[0].message.content
@@ -194,17 +205,24 @@ router.get('/', async (req, res) => {
       })
     }
 
+    console.log('Fetching scans for user:', user.id)
+    
     const { data: scans, error } = await supabase
       .from('scans')
       .select('*')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
 
-    if (error) throw error
+    if (error) {
+      console.error('Scans fetch error:', error.message, error.code, error.details)
+      throw error
+    }
 
-    res.json({ scans })
+    console.log('Found scans:', scans?.length || 0)
+    res.json({ scans: scans || [] })
 
   } catch (error) {
+    console.error('Scans route error:', error.message)
     res.status(500).json({
       error: 'Failed to fetch scans',
       message: error.message

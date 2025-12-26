@@ -92,6 +92,15 @@
   color: var(--status-error);
 }
 
+.nav-btn-admin {
+  color: var(--status-warning);
+}
+
+.nav-btn-admin:hover {
+  background-color: var(--status-warning-soft);
+  color: var(--status-warning);
+}
+
 /* ========== MAIN CONTENT ========== */
 .main-content {
   max-width: 1200px;

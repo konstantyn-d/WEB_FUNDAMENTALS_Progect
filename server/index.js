@@ -5,6 +5,7 @@ require('dotenv').config()
 const supabase = require('./config/supabase')
 const authRoutes = require('./routes/auth')
 const scansRoutes = require('./routes/scans')
+const adminRoutes = require('./routes/admin')
 
 const app = express()
 const PORT = process.env.PORT || 3000
@@ -57,6 +58,7 @@ app.get('/api/db-test', async (req, res) => {
 
 app.use('/api/auth', authRoutes)
 app.use('/api/scans', scansRoutes)
+app.use('/api/admin', adminRoutes)
 
 app.use((req, res) => {
   res.status(404).json({ 

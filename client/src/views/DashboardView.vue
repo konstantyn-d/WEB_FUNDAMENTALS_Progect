@@ -20,6 +20,7 @@ const router = useRouter()
 const authStore = useAuthStore()
 
 const user = computed(() => authStore.user)
+const isAdmin = computed(() => authStore.isAdmin)
 const userName = computed(() => {
   if (!user.value?.email) return ''
   return user.value.email.split('@')[0]
@@ -123,6 +124,10 @@ const goToProfile = () => {
   router.push({ name: 'profile' })
 }
 
+const goToAdmin = () => {
+  router.push({ name: 'admin' })
+}
+
 const logout = async () => {
   await authStore.logout()
   router.push({ name: 'login' })
@@ -150,6 +155,10 @@ onMounted(() => {
         <button @click="goToProfile" class="nav-btn">
           <img :src="IconUser" alt="" class="icon" />
           <span>Profile</span>
+        </button>
+        <button v-if="isAdmin" @click="goToAdmin" class="nav-btn nav-btn-admin">
+          <img :src="IconChartPie" alt="" class="icon" />
+          <span>Admin</span>
         </button>
         <button @click="logout" class="nav-btn nav-btn-danger">
           <img :src="IconLogout" alt="" class="icon" />

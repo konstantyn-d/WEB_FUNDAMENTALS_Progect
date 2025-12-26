@@ -4,7 +4,6 @@ const openai = require('../config/openai')
 
 const router = express.Router()
 
-// System prompt - БЕЗ медицинских слов!
 const SYSTEM_PROMPT = `
 You are a skincare & beauty routine assistant.
 You provide non-medical, cosmetic observations based only on what is visible in the photo.
@@ -14,7 +13,6 @@ If the person appears to be under 18, return empty concerns and basic routine.
 Output valid JSON only.
 `.trim()
 
-// User prompt - задача
 const USER_PROMPT = `
 From the visible appearance in the photo, list cosmetic skincare concerns (e.g., shine, dryness-looking areas, visible redness, uneven tone-looking areas, visible pores, blemish-like spots).
 Then propose a gentle routine.
@@ -34,7 +32,6 @@ Rules:
 - JSON only
 `.trim()
 
-// Fallback при отказе
 const FALLBACK_RESPONSE = {
   concerns: [],
   routine: {
@@ -46,7 +43,6 @@ const FALLBACK_RESPONSE = {
   overallSummary: "Could not assess photo details reliably. Here is a safe basic routine."
 }
 
-// Проверка на отказ модели
 function isRefusal(content) {
   if (!content) return true
   const lower = content.toLowerCase()
@@ -69,7 +65,6 @@ function isRefusal(content) {
   return refusalPhrases.some(phrase => lower.includes(phrase))
 }
 
-// Конвертация нового формата в старый для совместимости с фронтендом
 function convertToLegacyFormat(analysis) {
   return {
     issues: (analysis.concerns || []).map(concern => ({
@@ -123,18 +118,14 @@ router.post('/analyze', async (req, res) => {
 
     console.log('Analyzing skin for user:', user.email)
     console.log('Image data length:', image?.length || 0)
-    
-    // ДИАГНОСТИКА: проверяем формат изображения
     console.log('Image starts with:', image?.slice(0, 50))
 
-    // ИСПРАВЛЕНИЕ: гарантируем правильный формат data URL
     const imgUrl = image.startsWith('data:image/')
       ? image
       : `data:image/jpeg;base64,${image}`
     
     console.log('Image URL format:', imgUrl.slice(0, 30))
 
-    // Запрос к OpenAI с response_format для железобетонного JSON
     let response
     try {
       response = await openai.chat.completions.create({
@@ -167,7 +158,6 @@ router.post('/analyze', async (req, res) => {
       throw new Error('AI service temporarily unavailable')
     }
 
-    // ПРАВИЛЬНОЕ чтение ответа: content + refusal + finish_reason
     const choice = response?.choices?.[0]
     const msg = choice?.message
     
@@ -175,20 +165,17 @@ router.post('/analyze', async (req, res) => {
     const refusal = msg?.refusal ?? null
     const finish = choice?.finish_reason
     
-    // Диагностика
     console.log('finish_reason:', finish)
     console.log('has_content:', content !== null && content !== undefined)
     console.log('has_refusal:', refusal !== null && refusal !== undefined)
     if (refusal) console.log('refusal:', refusal)
     if (content) console.log('content preview:', content.substring(0, 300))
     
-    // Используем content или refusal
     const rawText = content ?? refusal ?? ''
 
     let analysis = null
     let status = 'completed'
 
-    // Проверяем на отказ: content_filter, refusal поле, или текст отказа
     if (finish === 'content_filter' || refusal || isRefusal(rawText)) {
       console.log('OpenAI refused to analyze, reason:', finish === 'content_filter' ? 'content_filter' : refusal ? 'refusal field' : 'text refusal')
       analysis = FALLBACK_RESPONSE
@@ -198,7 +185,6 @@ router.post('/analyze', async (req, res) => {
       analysis = FALLBACK_RESPONSE
       status = 'empty_response'
     } else {
-      // Пробуем распарсить JSON
       try {
         analysis = JSON.parse(rawText)
         console.log('Parsed analysis successfully')
@@ -209,10 +195,8 @@ router.post('/analyze', async (req, res) => {
       }
     }
 
-    // Конвертируем в legacy формат для фронтенда
     const legacyAnalysis = convertToLegacyFormat(analysis)
 
-    // Сохраняем только если есть валидный результат
     let scanId = null
     
     if (status === 'completed') {
@@ -322,7 +306,6 @@ router.get('/stats', async (req, res) => {
       })
     }
 
-    // Get all scans ordered by date
     const { data: scans, error } = await supabase
       .from('scans')
       .select('*')

@@ -1,14 +1,8 @@
-/* ============================================
-   SKIN ANALYZER - DASHBOARD
-   Clean medical AI dashboard
-   ============================================ */
-
 .dashboard {
   min-height: 100vh;
   background-color: var(--bg-main);
 }
 
-/* ========== NAVBAR ========== */
 .navbar {
   display: flex;
   justify-content: space-between;
@@ -101,7 +95,6 @@
   color: var(--status-warning);
 }
 
-/* ========== MAIN CONTENT ========== */
 .main-content {
   max-width: 1200px;
   margin: 0 auto;
@@ -114,7 +107,6 @@
   }
 }
 
-/* Welcome Section */
 .welcome-section {
   margin-bottom: var(--space-8);
 }
@@ -137,7 +129,6 @@
   color: var(--text-secondary);
 }
 
-/* ========== CARDS GRID ========== */
 .cards-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -157,7 +148,6 @@
   }
 }
 
-/* Dashboard Cards */
 .dashboard-card {
   background-color: var(--bg-card);
   border-radius: var(--radius-lg);
@@ -226,7 +216,6 @@
   letter-spacing: 0.05em;
 }
 
-/* ========== SCAN CTA ========== */
 .scan-cta {
   background-color: var(--bg-card);
   border-radius: var(--radius-xl);
@@ -273,42 +262,39 @@
   font-size: var(--font-size-base);
 }
 
-/* ========== RECENT SCANS ========== */
 .recent-scans {
-  background-color: var(--bg-card);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border-soft);
-  box-shadow: var(--shadow-sm);
-}
-
-.recent-scans-header {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--space-5) var(--space-6);
-  border-bottom: 1px solid var(--border-soft);
-}
-
-.recent-scans-title {
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-semibold);
-  color: var(--text-primary);
-}
-
-.recent-scans-list {
-  padding: var(--space-4) var(--space-6);
+  flex-direction: column;
+  gap: var(--space-3);
 }
 
 .scan-item {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: all var(--transition-normal);
+}
+
+.scan-item-clickable {
+  cursor: pointer;
+}
+
+.scan-item-clickable:hover {
+  border-color: var(--accent-primary);
+  box-shadow: var(--shadow-md);
+}
+
+.scan-item-expanded {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.scan-item-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-4) 0;
-  border-bottom: 1px solid var(--border-soft);
-}
-
-.scan-item:last-child {
-  border-bottom: none;
+  padding: var(--space-4) var(--space-5);
 }
 
 .scan-item-info {
@@ -325,12 +311,18 @@
   height: 40px;
   background-color: var(--accent-soft);
   border-radius: var(--radius-md);
+}
+
+.scan-item-icon .icon {
+  width: 20px;
+  height: 20px;
   color: var(--accent-primary);
 }
 
 .scan-item-details {
   display: flex;
   flex-direction: column;
+  gap: var(--space-1);
 }
 
 .scan-item-date {
@@ -344,23 +336,17 @@
   color: var(--text-secondary);
 }
 
-.scan-item-icon .icon {
-  width: 18px;
-  height: 18px;
+.scan-item-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
 }
 
 .scan-item-badge {
-  display: inline-flex;
-  align-items: center;
   padding: var(--space-1) var(--space-3);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
   border-radius: var(--radius-full);
-}
-
-.scan-item-badge.no-issues {
-  background-color: var(--status-success-soft);
-  color: var(--status-success);
 }
 
 .scan-item-badge.has-issues {
@@ -368,7 +354,152 @@
   color: var(--status-warning);
 }
 
-/* ========== LOADING STATE ========== */
+.scan-item-badge.no-issues {
+  background-color: var(--status-success-soft);
+  color: var(--status-success);
+}
+
+.scan-item-chevron {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  transition: transform var(--transition-fast);
+}
+
+.scan-item-chevron.rotated {
+  transform: rotate(180deg);
+}
+
+.scan-item-content {
+  padding: 0 var(--space-5) var(--space-5);
+  border-top: 1px solid var(--border-soft);
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.issues-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+}
+
+.issue-card {
+  padding: var(--space-4);
+  background-color: var(--bg-main);
+  border-radius: var(--radius-md);
+  border-left: 3px solid var(--accent-primary);
+}
+
+.issue-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+}
+
+.issue-name {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+}
+
+.issue-severity {
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  border-radius: var(--radius-sm);
+  text-transform: capitalize;
+}
+
+.issue-severity.severity-mild {
+  background-color: var(--status-success-soft);
+  color: var(--status-success);
+}
+
+.issue-severity.severity-moderate {
+  background-color: var(--status-warning-soft);
+  color: var(--status-warning);
+}
+
+.issue-severity.severity-severe {
+  background-color: var(--status-error-soft);
+  color: var(--status-error);
+}
+
+.issue-location {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-2);
+}
+
+.issue-location .icon-sm {
+  width: 12px;
+  height: 12px;
+}
+
+.issue-description {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  line-height: var(--line-height-relaxed);
+  margin-bottom: var(--space-2);
+}
+
+.issue-confidence {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+.scan-recommendations {
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px dashed var(--border-soft);
+}
+
+.scan-recommendations-title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  margin-bottom: var(--space-3);
+}
+
+.scan-recommendations-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.scan-recommendations-list li {
+  position: relative;
+  padding-left: var(--space-5);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  line-height: var(--line-height-relaxed);
+}
+
+.scan-recommendations-list li::before {
+  content: "→";
+  position: absolute;
+  left: 0;
+  color: var(--accent-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
 .loading-state {
   display: flex;
   flex-direction: column;
@@ -399,7 +530,6 @@
   }
 }
 
-/* ========== ERROR BANNER ========== */
 .error-banner {
   display: flex;
   align-items: center;
@@ -423,7 +553,6 @@
   color: var(--status-error);
 }
 
-/* ========== DASHBOARD SECTIONS ========== */
 .dashboard-section {
   margin-bottom: var(--space-8);
 }
@@ -449,7 +578,6 @@
   color: var(--accent-primary);
 }
 
-/* ========== RECOMMENDATIONS GRID ========== */
 .recommendations-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -493,7 +621,6 @@
   line-height: var(--line-height-relaxed);
 }
 
-/* ========== CARD EXTRAS ========== */
 .card-sublabel {
   margin-top: var(--space-2);
   font-size: var(--font-size-xs);
@@ -502,13 +629,4 @@
 
 .card-value-sm {
   font-size: var(--font-size-xl);
-}
-
-/* ========== RECENT SCANS LIST ========== */
-.recent-scans {
-  padding: var(--space-2) 0;
-}
-
-.recent-scans .scan-item {
-  padding: var(--space-4) var(--space-5);
 }

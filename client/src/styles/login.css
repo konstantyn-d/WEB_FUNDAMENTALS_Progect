@@ -1,15 +1,9 @@
-/* ============================================
-   SKIN ANALYZER - LOGIN PAGE
-   Clean medical authentication UI
-   ============================================ */
-
 .login-page {
   min-height: 100vh;
   display: flex;
   background-color: var(--bg-main);
 }
 
-/* Left Panel - Branding */
 .login-branding {
   display: none;
   flex: 1;
@@ -96,7 +90,6 @@
   color: var(--accent-primary-light);
 }
 
-/* Right Panel - Form */
 .login-form-panel {
   flex: 1;
   display: flex;
@@ -153,7 +146,6 @@
   color: var(--text-secondary);
 }
 
-/* Form Card */
 .login-card {
   background-color: var(--bg-card);
   border-radius: var(--radius-xl);
@@ -204,7 +196,6 @@
   margin-top: var(--space-2);
 }
 
-/* Toggle */
 .login-toggle {
   text-align: center;
   margin-top: var(--space-6);
@@ -224,7 +215,6 @@
   text-decoration: underline;
 }
 
-/* Footer */
 .login-footer {
   text-align: center;
   margin-top: var(--space-8);

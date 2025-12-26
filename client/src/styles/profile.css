@@ -1,14 +1,8 @@
-/* ============================================
-   SKIN ANALYZER - PROFILE PAGE
-   Clean medical profile UI
-   ============================================ */
-
 .profile-page {
   min-height: 100vh;
   background-color: var(--bg-main);
 }
 
-/* ========== HEADER ========== */
 .profile-header {
   background-color: var(--bg-card);
   border-bottom: 1px solid var(--border-soft);
@@ -58,7 +52,6 @@
   height: 16px;
 }
 
-/* User Info */
 .profile-user {
   display: flex;
   align-items: center;
@@ -117,7 +110,6 @@
   height: 14px;
 }
 
-/* ========== MAIN CONTENT ========== */
 .profile-content {
   max-width: 800px;
   margin: 0 auto;
@@ -130,7 +122,6 @@
   }
 }
 
-/* Stats Grid */
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -183,7 +174,6 @@
   color: var(--text-muted);
 }
 
-/* ========== SECTIONS ========== */
 .profile-section {
   background-color: var(--bg-card);
   border-radius: var(--radius-lg);
@@ -210,7 +200,6 @@
   padding: var(--space-5) var(--space-6);
 }
 
-/* Info List */
 .info-list {
   display: flex;
   flex-direction: column;
@@ -241,7 +230,6 @@
   color: var(--text-primary);
 }
 
-/* ========== QUICK ACTIONS ========== */
 .quick-actions {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

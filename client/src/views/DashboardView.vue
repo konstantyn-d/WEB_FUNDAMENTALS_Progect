@@ -36,6 +36,16 @@ const recentScans = ref([])
 const latestRecommendations = ref([])
 const isLoading = ref(true)
 const error = ref('')
+const expandedScanId = ref(null)
+
+// Toggle expanded scan
+const toggleScan = (scanId) => {
+  if (expandedScanId.value === scanId) {
+    expandedScanId.value = null
+  } else {
+    expandedScanId.value = scanId
+  }
+}
 
 // Fetch dashboard data
 const fetchDashboardData = async () => {
@@ -256,20 +266,80 @@ onMounted(() => {
                 v-for="scan in recentScans" 
                 :key="scan.id"
                 class="scan-item"
+                :class="{ 
+                  'scan-item-expanded': expandedScanId === scan.id,
+                  'scan-item-clickable': scan.issues?.length > 0
+                }"
+                @click="scan.issues?.length > 0 ? toggleScan(scan.id) : null"
               >
-                <div class="scan-item-info">
-                  <div class="scan-item-icon">
-                    <img :src="IconCamera" alt="" class="icon" />
+                <div class="scan-item-header">
+                  <div class="scan-item-info">
+                    <div class="scan-item-icon">
+                      <img :src="IconCamera" alt="" class="icon" />
+                    </div>
+                    <div class="scan-item-details">
+                      <span class="scan-item-date">{{ formatScanDate(scan.created_at) }}</span>
+                      <span class="scan-item-issues">
+                        {{ scan.issues?.length || 0 }} issue{{ scan.issues?.length !== 1 ? 's' : '' }} detected
+                      </span>
+                    </div>
                   </div>
-                  <div class="scan-item-details">
-                    <span class="scan-item-date">{{ formatScanDate(scan.created_at) }}</span>
-                    <span class="scan-item-issues">
-                      {{ scan.issues?.length || 0 }} issue{{ scan.issues?.length !== 1 ? 's' : '' }} detected
-                    </span>
+                  <div class="scan-item-right">
+                    <div class="scan-item-badge" :class="scan.issues?.length > 0 ? 'has-issues' : 'no-issues'">
+                      {{ scan.issues?.length > 0 ? 'Issues Found' : 'Clear' }}
+                    </div>
+                    <div 
+                      v-if="scan.issues?.length > 0" 
+                      class="scan-item-chevron"
+                      :class="{ 'rotated': expandedScanId === scan.id }"
+                    >
+                      ▼
+                    </div>
                   </div>
                 </div>
-                <div class="scan-item-badge" :class="scan.issues?.length > 0 ? 'has-issues' : 'no-issues'">
-                  {{ scan.issues?.length > 0 ? 'Issues Found' : 'Clear' }}
+                
+                <!-- Expanded Content -->
+                <div 
+                  v-if="expandedScanId === scan.id && scan.issues?.length > 0" 
+                  class="scan-item-content"
+                >
+                  <div class="issues-list">
+                    <div 
+                      v-for="(issue, index) in scan.issues" 
+                      :key="index"
+                      class="issue-card"
+                    >
+                      <div class="issue-header">
+                        <span class="issue-name">{{ issue.name }}</span>
+                        <span 
+                          class="issue-severity"
+                          :class="'severity-' + (issue.severity || 'mild')"
+                        >
+                          {{ issue.severity || 'mild' }}
+                        </span>
+                      </div>
+                      <div class="issue-location" v-if="issue.location">
+                        <img :src="IconSearch" alt="" class="icon-sm" />
+                        {{ issue.location }}
+                      </div>
+                      <p class="issue-description" v-if="issue.description">
+                        {{ issue.description }}
+                      </p>
+                      <div class="issue-confidence" v-if="issue.confidence">
+                        Confidence: {{ Math.round(issue.confidence * 100) }}%
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Recommendations for this scan -->
+                  <div v-if="scan.recommendations?.length > 0" class="scan-recommendations">
+                    <h4 class="scan-recommendations-title">Recommendations</h4>
+                    <ul class="scan-recommendations-list">
+                      <li v-for="(rec, idx) in scan.recommendations" :key="idx">
+                        {{ rec }}
+                      </li>
+                    </ul>
+                  </div>
                 </div>
               </div>
             </div>

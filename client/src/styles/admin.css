@@ -1,14 +1,8 @@
-/* ============================================
-   SKIN ANALYZER - ADMIN PANEL
-   Clean professional admin dashboard
-   ============================================ */
-
 .admin-page {
   min-height: 100vh;
   background-color: var(--bg-main);
 }
 
-/* ========== HEADER ========== */
 .admin-header {
   background-color: var(--bg-dark);
   border-bottom: 1px solid var(--border-dark);
@@ -80,7 +74,6 @@
   background-color: var(--status-error-soft);
 }
 
-/* ========== MAIN CONTENT ========== */
 .admin-content {
   max-width: 1400px;
   margin: 0 auto;
@@ -93,7 +86,6 @@
   }
 }
 
-/* ========== MESSAGES ========== */
 .admin-message {
   display: flex;
   align-items: center;
@@ -120,7 +112,6 @@
   color: var(--status-success);
 }
 
-/* ========== LOADING ========== */
 .admin-loading {
   display: flex;
   flex-direction: column;
@@ -151,7 +142,6 @@
   }
 }
 
-/* ========== TABS ========== */
 .admin-tabs {
   display: flex;
   gap: var(--space-2);
@@ -192,7 +182,6 @@
   height: 18px;
 }
 
-/* ========== TAB CONTENT ========== */
 .admin-tab-content {
   animation: fadeIn 0.2s ease-out;
 }
@@ -223,7 +212,6 @@
   margin-bottom: var(--space-4);
 }
 
-/* ========== STATS GRID ========== */
 .admin-stats-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -300,7 +288,6 @@
   letter-spacing: 0.05em;
 }
 
-/* ========== TODAY STATS ========== */
 .admin-today-stats {
   display: flex;
   gap: var(--space-6);
@@ -327,7 +314,6 @@
   color: var(--text-secondary);
 }
 
-/* ========== TABLE ========== */
 .admin-table-container {
   background-color: var(--bg-card);
   border-radius: var(--radius-lg);
@@ -370,7 +356,6 @@
   background-color: var(--bg-main);
 }
 
-/* User cell */
 .user-cell {
   display: flex;
   align-items: center;
@@ -393,7 +378,6 @@
   height: 16px;
 }
 
-/* Role badge */
 .role-badge {
   display: inline-flex;
   padding: var(--space-1) var(--space-3);
@@ -413,7 +397,6 @@
   color: var(--text-secondary);
 }
 
-/* Issues badge */
 .issues-badge {
   display: inline-flex;
   padding: var(--space-1) var(--space-3);
@@ -432,7 +415,6 @@
   color: var(--status-success);
 }
 
-/* Action buttons */
 .action-buttons {
   display: flex;
   gap: var(--space-2);
@@ -473,7 +455,6 @@
   color: var(--text-inverse);
 }
 
-/* ========== RESPONSIVE ========== */
 @media (max-width: 768px) {
   .admin-table-container {
     overflow-x: auto;
@@ -487,4 +468,3 @@
     overflow-x: auto;
   }
 }
-

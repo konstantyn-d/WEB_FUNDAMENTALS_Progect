@@ -3,7 +3,6 @@ const supabase = require('../config/supabase')
 
 const router = express.Router()
 
-// Middleware to check if user is admin
 const requireAdmin = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization
@@ -25,7 +24,6 @@ const requireAdmin = async (req, res, next) => {
       })
     }
 
-    // Check if user has admin role in profiles table
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('role')
@@ -57,34 +55,28 @@ const requireAdmin = async (req, res, next) => {
   }
 }
 
-// GET /api/admin/stats - Platform statistics
 router.get('/stats', requireAdmin, async (req, res) => {
   try {
-    // Get total users count
     const { data: profiles, error: profilesError } = await supabase
       .from('profiles')
       .select('id, created_at')
 
     if (profilesError) throw profilesError
 
-    // Get total scans count
     const { data: scans, error: scansError } = await supabase
       .from('scans')
       .select('id, created_at, issues')
 
     if (scansError) throw scansError
 
-    // Calculate stats
     const totalUsers = profiles?.length || 0
     const totalScans = scans?.length || 0
     const totalIssues = scans?.reduce((acc, scan) => acc + (scan.issues?.length || 0), 0) || 0
 
-    // Users registered today
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     const usersToday = profiles?.filter(p => new Date(p.created_at) >= today).length || 0
 
-    // Scans today
     const scansToday = scans?.filter(s => new Date(s.created_at) >= today).length || 0
 
     res.json({
@@ -105,7 +97,6 @@ router.get('/stats', requireAdmin, async (req, res) => {
   }
 })
 
-// GET /api/admin/users - Get all users
 router.get('/users', requireAdmin, async (req, res) => {
   try {
     const { data: profiles, error } = await supabase
@@ -115,7 +106,6 @@ router.get('/users', requireAdmin, async (req, res) => {
 
     if (error) throw error
 
-    // Get scan counts for each user
     const usersWithStats = await Promise.all(
       profiles.map(async (profile) => {
         const { data: scans } = await supabase
@@ -141,7 +131,6 @@ router.get('/users', requireAdmin, async (req, res) => {
   }
 })
 
-// GET /api/admin/scans - Get all scans
 router.get('/scans', requireAdmin, async (req, res) => {
   try {
     const { data: scans, error } = await supabase
@@ -151,7 +140,6 @@ router.get('/scans', requireAdmin, async (req, res) => {
 
     if (error) throw error
 
-    // Get user emails for each scan
     const scansWithUsers = await Promise.all(
       scans.map(async (scan) => {
         const { data: profile } = await supabase
@@ -178,12 +166,10 @@ router.get('/scans', requireAdmin, async (req, res) => {
   }
 })
 
-// DELETE /api/admin/users/:id - Delete a user
 router.delete('/users/:id', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params
 
-    // Don't allow deleting yourself
     if (id === req.user.id) {
       return res.status(400).json({
         error: 'Bad Request',
@@ -191,7 +177,6 @@ router.delete('/users/:id', requireAdmin, async (req, res) => {
       })
     }
 
-    // Delete user's scans first
     const { error: scansError } = await supabase
       .from('scans')
       .delete()
@@ -201,7 +186,6 @@ router.delete('/users/:id', requireAdmin, async (req, res) => {
       console.error('Error deleting user scans:', scansError)
     }
 
-    // Delete user profile
     const { error: profileError } = await supabase
       .from('profiles')
       .delete()
@@ -223,7 +207,6 @@ router.delete('/users/:id', requireAdmin, async (req, res) => {
   }
 })
 
-// DELETE /api/admin/scans/:id - Delete a scan
 router.delete('/scans/:id', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params
@@ -249,7 +232,6 @@ router.delete('/scans/:id', requireAdmin, async (req, res) => {
   }
 })
 
-// PUT /api/admin/users/:id/role - Update user role
 router.put('/users/:id/role', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params
@@ -262,7 +244,6 @@ router.put('/users/:id/role', requireAdmin, async (req, res) => {
       })
     }
 
-    // Don't allow changing your own role
     if (id === req.user.id) {
       return res.status(400).json({
         error: 'Bad Request',
@@ -295,4 +276,3 @@ router.put('/users/:id/role', requireAdmin, async (req, res) => {
 })
 
 module.exports = router
-

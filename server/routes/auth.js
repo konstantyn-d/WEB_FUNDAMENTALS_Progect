@@ -120,7 +120,6 @@ router.get('/me', async (req, res) => {
   }
 })
 
-// GET /api/auth/profile - Get user profile with role
 router.get('/profile', async (req, res) => {
   try {
     const authHeader = req.headers.authorization
@@ -144,7 +143,6 @@ router.get('/profile', async (req, res) => {
 
     console.log('Fetching profile for user:', user.id, user.email)
 
-    // Get profile with role - use maybeSingle to handle missing profiles
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('*')
@@ -160,7 +158,6 @@ router.get('/profile', async (req, res) => {
       })
     }
 
-    // If profile doesn't exist, create it
     if (!profile) {
       console.log('Profile not found, creating new profile for:', user.email)
       
@@ -169,7 +166,7 @@ router.get('/profile', async (req, res) => {
         .insert({
           id: user.id,
           email: user.email,
-          role: 'admin' // Make first user admin, or change to 'user'
+          role: 'admin'
         })
         .select()
         .single()
